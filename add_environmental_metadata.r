@@ -4,6 +4,7 @@ library(tidyverse)
 library(broom)
 
 #file_names <- list.files(soil_sample_dir, pattern = "fastq", recursive=T)
+all_samp_reports <- readRDS("/projectnb2/talbot-lab-data/zrwerbin/toolchest/kraken_reports_merged.rds")
 
 samp_info <- parseNEONsampleIDs(as.character(all_samp_reports$sampleID))
 all_samp_reports$plot_date = samp_info$plot_date
@@ -29,7 +30,7 @@ species_abun <- soil_info_df[soil_info_df$taxRank=="S",] %>%
 
 #make the dataframe wide so that correlations are easier
 species_wide <- species_abun %>%
-	select("plot_date", "siteID", "plotID", "dateID",
+	select("plot_date", "siteID", "plotID",
 				 "soilInCaClpH", "litterDepth", "soilTemp", "soilMoisture", "organicCPercent",
 				 "nitrogenPercent", "CNratio", "percentage", "taxID", "name", "sampleID.y") %>%
 	pivot_wider(names_from = name, values_from = percentage)
