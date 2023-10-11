@@ -1,5 +1,5 @@
-
-source("/projectnb2/talbot-lab-data/zrwerbin/temporal_forecast/functions/helperFunctions.r")
+# Read in Kraken assignment data and combine with soil metadata
+source("/projectnb/dietzelab/zrwerbin/microbialForecasts/microbialForecast/R/helperFunctions.r")
 library(tidyverse)
 library(broom)
 
@@ -24,6 +24,11 @@ relevant_soil_data = merge(NEON_soil_phys, NEON_soil_chem) %>%
 
 soil_info_df <- merge(relevant_soil_data, all_samp_reports, by="plot_date")
 
+write.csv(soil_info_df, "/projectnb/talbot-lab-data/zrwerbin/soil_genome_db/example_soil_db_output.csv")
+
+# Determine species that vary strongly with environment (just an example)
+soil_info_df <- read.csv("/projectnb/talbot-lab-data/zrwerbin/soil_genome_db/example_soil_db_output.csv")
+
 # Limit to species-level identifications and filter to species above .1%
 species_abun <- soil_info_df[soil_info_df$taxRank=="S",] %>%
 	filter(percentage > .01)
@@ -35,10 +40,16 @@ species_wide <- species_abun %>%
 				 "nitrogenPercent", "CNratio", "percentage", "taxID", "name", "sampleID.y") %>%
 	pivot_wider(names_from = name, values_from = percentage)
 
-cor_fun <- function(df) cor.test(df$percentage, df$soilInCaClpH, method = "spearman") %>% tidy()
-
+# Compute correlations
+cor_fun <- function(df) cor.test(df$percentage, df$soilInCaClpH, method = "spearman", exact = FALSE) %>% tidy()
 species_nest = species_abun %>% group_by(name, taxID) %>% nest()
 data_nest <- mutate(species_nest, model = map(data, cor_fun))
-corr_pr <- select(data_nest, -data) %>% unnest() %>% filter(p.value <0.05)
-
+# Filter by correlation strength
+corr_pr <- select(data_nest, -data) %>% unnest(cols = c(model)) %>% filter(p.value <0.05 & abs(estimate) > .4)
 species_of_interest <- corr_pr$name
+
+# Visualize abundances that correlate with pH
+ggplot(species_abun %>% dplyr::filter(name %in% species_of_interest[1:4])) +
+	geom_point(aes(x = soilInCaClpH, y = percentage, color=name), alpha=.5, position=position_jitter(), size=2) +
+	facet_wrap(~name, scales = "free") + theme_bw()
+
