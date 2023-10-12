@@ -38,7 +38,7 @@ wget --directory-prefix $OUTDIR https://ftp.ncbi.nlm.nih.gov/pub/taxonomy/taxdum
 #### AFTER CREATING TSV AND DOWNLOADING FILES - RUN STRUO CREATE ####
 # Takes a few hours - make sure you request enough computational resources
 
-qrsh -l h_rt=18:00:00 -pe omp 28 -l mem_per_core=16G
+qrsh -l h_rt=18:00:00 -pe omp 28 -l mem_per_core=16G -n
 cd /projectnb/talbot-lab-data/zrwerbin/soil_genome_db/Struo2
 OUTDIR=./fungal_genomes/
 module load miniconda
@@ -48,15 +48,19 @@ conda activate struo2
 snakemake --use-conda -j 1 --dry-run --configfile config.yaml --printshellcmds --rerun-incomplete
 snakemake --use-conda -j 28 --configfile config.yaml --printshellcmds --rerun-incomplete --local-cores 28
 
+# Nvm, instead run as batch job since it takes too long
+qsub snakemake_sge.sh config.yaml 28
+
 
 #### NOW USE DATABASE WITH METAGENOME FILES ####
+qrsh -l h_rt=4:00:00 -pe omp 28 -l mem_per_core=4G -now n
 
-DBDIR=/projectnb/talbot-lab-data/zrwerbin/soil_genome_db/Struo2/databases/fungal_db/test
-READ1=/projectnb2/talbot-lab-data/metabolic_models/scripts/metaGEM/qfiltered/HARV_002-O-20170801-COMP-DNA2/HARV_002-O-20170801-COMP-DNA2_R1.fastq.gz
-READ2=/projectnb2/talbot-lab-data/metabolic_models/scripts/metaGEM/qfiltered/HARV_002-O-20170801-COMP-DNA2/HARV_002-O-20170801-COMP-DNA2_R2.fastq.gz
-REPORT_PATH=/projectnb/talbot-lab-data/zrwerbin/soil_genome_db/kraken_output/test_fungal_db.kreport
-OUTPUT_PATH=/projectnb/talbot-lab-data/zrwerbin/soil_genome_db/kraken_output/test_fungal_db.output
-NTHREADS=28
+module load kraken2
+DBDIR=/projectnb/talbot-lab-data/zrwerbin/soil_genome_db/Struo2/databases/fungal_db/test/kraken2
+READ1=/projectnb2/talbot-lab-data/metabolic_models/scripts/metaGEM/qfiltered/HARV_020-O-20170731-COMP-DNA1/HARV_020-O-20170731-COMP-DNA1_R1.fastq.gz
+READ2=/projectnb2/talbot-lab-data/metabolic_models/scripts/metaGEM/qfiltered/HARV_020-O-20170731-COMP-DNA1/HARV_020-O-20170731-COMP-DNA1_R2.fastq.gz
+REPORT_PATH=/projectnb/talbot-lab-data/zrwerbin/soil_genome_db/kraken_output/test_HARV_020-O-20170731-COMP-DNA1.kreport
+OUTPUT_PATH=/projectnb/talbot-lab-data/zrwerbin/soil_genome_db/kraken_output/test_HARV_020-O-20170731-COMP-DNA1.output
 
 kraken2 --db $DBDIR --report $REPORT_PATH --output $OUTPUT_PATH --paired $READ1 $READ2 --threads $NTHREADS
 
